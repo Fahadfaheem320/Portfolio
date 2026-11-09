@@ -31,12 +31,32 @@ export const Contact = ({ personal }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      // If a Formspree / Web3Forms endpoint is configured, send real email:
+      if (personal.formEndpoint && personal.formEndpoint.startsWith('http')) {
+        const response = await fetch(personal.formEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to send inquiry');
+        }
+      } else {
+        // Fallback smooth simulation
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
       setSubmitting(false);
       setSubmitted(true);
       setFormData({
@@ -46,7 +66,10 @@ export const Contact = ({ personal }) => {
         service: 'Brand Identity',
         message: ''
       });
-    }, 900);
+    } catch (err) {
+      setSubmitting(false);
+      setErrors({ form: 'Could not send message right now. Please email directly or try again.' });
+    }
   };
 
   const handleCopy = (text, fieldName) => {
@@ -214,6 +237,13 @@ export const Contact = ({ personal }) => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} noValidate className="contact-form">
+                  {errors.form && (
+                    <div className="form-error-banner">
+                      <AlertCircle size={15} />
+                      <span>{errors.form}</span>
+                    </div>
+                  )}
+
                   <div className="form-row-2">
                     <div className="form-group">
                       <label htmlFor="contact-name" className="form-label">
